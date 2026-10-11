@@ -17,22 +17,32 @@ jobs:
 
       - name: Discover Xcode project and scheme
         id: discover
+        shell: bash
         run: |
-          # Find the .xcodeproj file
-          PROJECT_FILE=$(ls -1 *.xcodeproj 2>/dev/null | head -1)
+          set -euo pipefail
+
+          PROJECT_FILE="$(find . -type d -name "*.xcodeproj" -print 2>/dev/null | head -n 1)"
           if [ -z "$PROJECT_FILE" ]; then
             echo "❌ No .xcodeproj found"
             exit 1
           fi
           echo "Found project: $PROJECT_FILE"
 
-          # Extract the first target/scheme from xcodebuild
-          SCHEME=$(xcodebuild -project "$PROJECT_FILE" -list -json 2>/dev/null \
-            | ruby -e "require 'json'; d=JSON.parse(STDIN.read); puts (d['project']['schemes']&.first || d['project']['targets']&.first)")
-          if [ -z "$SCHEME" ]; then
-            echo "❌ No scheme found"
+          LIST_OUTPUT="$(xcodebuild -project "$PROJECT_FILE" -list -json 2>/dev/null || true)"
+          if [ -z "$LIST_OUTPUT" ] || [ "$LIST_OUTPUT" = "null" ]; then
+            echo "❌ xcodebuild did not return valid project metadata"
+            xcodebuild -project "$PROJECT_FILE" -list || true
             exit 1
           fi
+
+          SCHEME="$(ruby -e 'require "json"; data = JSON.parse(STDIN.read); puts((data.dig("project", "schemes")&.first || data.dig("project", "targets")&.first))' <<< "$LIST_OUTPUT")"
+
+          if [ -z "$SCHEME" ]; then
+            echo "❌ No scheme found"
+            echo "$LIST_OUTPUT"
+            exit 1
+          fi
+
           echo "Using scheme: $SCHEME"
           echo "scheme=$SCHEME" >> "$GITHUB_OUTPUT"
           echo "project=$PROJECT_FILE" >> "$GITHUB_OUTPUT"
@@ -47,5 +57,4 @@ jobs:
             -scheme "$SCHEME" \
             -configuration Release \
             CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            | xcpretty && exit ${PIPESTATUS[0]}
+            CODE_SIGNING_REQUIRED=NO
