@@ -1,51 +1,30 @@
-name: Build and Analyze
+name: Xcode - Build and Analyze
 
 on:
   push:
-    branches: ["master"]
+    branches: [ "master" ]
   pull_request:
-    branches: ["master"]
+    branches: [ "master" ]
 
 jobs:
   build:
-    name: Build and Analyze
+    name: Build and analyse default scheme using xcodebuild command
     runs-on: macos-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Discover Xcode project and scheme
-        id: discover
+      - name: Set Default Scheme
         run: |
-          # Find the .xcodeproj file
-          PROJECT_FILE=$(ls -1 *.xcodeproj 2>/dev/null | head -1)
-          if [ -z "$PROJECT_FILE" ]; then
-            echo "❌ No .xcodeproj found"
-            exit 1
-          fi
-          echo "Found project: $PROJECT_FILE"
-
-          # Extract the first target/scheme from xcodebuild
-          SCHEME=$(xcodebuild -project "$PROJECT_FILE" -list -json 2>/dev/null \
-            | ruby -e "require 'json'; d=JSON.parse(STDIN.read); puts (d['project']['schemes']&.first || d['project']['targets']&.first)")
-          if [ -z "$SCHEME" ]; then
-            echo "❌ No scheme found"
-            exit 1
-          fi
-          echo "Using scheme: $SCHEME"
-          echo "scheme=$SCHEME" >> "$GITHUB_OUTPUT"
-          echo "project=$PROJECT_FILE" >> "$GITHUB_OUTPUT"
-
-      - name: Build and Analyze
+          scheme_list=$(xcodebuild -list -json | tr -d "\n")
+          default=$(echo $scheme_list | ruby -e "require 'json'; puts JSON.parse(STDIN.gets)['project']['targets'][0]")
+          echo $default | cat >default
+          echo Using default scheme: $default
+      - name: Build
+        env:
+          scheme: ${{ 'default' }}
         run: |
-          SCHEME="${{ steps.discover.outputs.scheme }}"
-          PROJECT="${{ steps.discover.outputs.project }}"
-          echo "Building scheme: $SCHEME in project: $PROJECT"
-          xcodebuild clean build analyze \
-            -project "$PROJECT" \
-            -scheme "$SCHEME" \
-            -configuration Release \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            | xcpretty && exit ${PIPESTATUS[0]}
+          if [ $scheme = default ]; then scheme=$(cat default); fi
+          if [ "`ls -A | grep -i \\.xcworkspace\$`" ]; then filetype_parameter="workspace" && file_to_build="`ls -A | grep -i \\.xcworkspace\$`"; else filetype_parameter="project" && file_to_build="`ls -A | grep -i \\.xcodeproj\$`"; fi
+          file_to_build=`echo $file_to_build | awk '{$1=$1;print}'`
+          xcodebuild clean build analyze -scheme "$scheme" -"$filetype_parameter" "$file_to_build" | xcpretty && exit ${PIPESTATUS[0]}
