@@ -27,10 +27,10 @@
    NSWindow *w = [super window];
    // Work out what our defaults are called
    NSString *identifier = [[NSBundle bundleForClass:[self class]] bundleIdentifier];
-   if(identifier == nil) {
+   if (identifier == nil) {
       LogError("window", "Trying to load preferences but identifier is nil.");
       return w;
-   }  
+   }
    // Load defaults
    ScreenSaverDefaults *defaults = [ScreenSaverDefaults defaultsForModuleWithName:identifier];
    // Initialize the UI elements
@@ -72,11 +72,11 @@
    [mainonly setState:MAINONLY_DEFAULT_BOOLEAN];
 }
 
-// The About button takes them to a web site
+// The About button takes them to the project web site
 - (IBAction)about:(id)sender
 {
    NSAppleScript *go = [[NSAppleScript alloc]
-initWithSource:@"open location \"http://meta.ath0.com/redpill/\""];
+      initWithSource:@"open location \"https://github.com/DjManny/RedPill\""];
    [go executeAndReturnError:nil];
 }
 
@@ -89,12 +89,12 @@ initWithSource:@"open location \"http://meta.ath0.com/redpill/\""];
 {
    [spoon setTransparent:FALSE];
 }
-   
+
 - (IBAction)ok:(id)sender
 {
    // Work out what our defaults are called
    NSString *identifier = [[NSBundle bundleForClass:[self class]] bundleIdentifier];
-   if(identifier == nil) {
+   if (identifier == nil) {
       LogError("ok", "Trying to save preferences but identifier is nil.");
       [NSApp endSheet:[self window]];
       return;
@@ -119,9 +119,9 @@ initWithSource:@"open location \"http://meta.ath0.com/redpill/\""];
    // Update to disk
    [defaults synchronize];
 
-   // Tell the main scrensaver loop to reload the preferences from us
+   // Tell the main screensaver loop to reload the preferences from us
    [[NSNotificationCenter defaultCenter] postNotificationName:PREFS_NOTIFICATION object:nil];
-   
+
    [NSApp endSheet:[self window]];
 }
 @end

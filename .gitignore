@@ -1,2 +1,22 @@
+# macOS
 .DS_Store
-build
+
+# Xcode build output
+build/
+DerivedData/
+
+# Xcode user data
+*.xcuserstate
+xcuserdata/
+*.xcworkspace/xcuserdata/
+
+# Build artifacts
+*.saver
+*.o
+*.a
+
+# Swift Package Manager
+.swiftpm/
+
+# CocoaPods (if added in future)
+Pods/
